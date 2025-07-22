@@ -1,7 +1,7 @@
 ---
-title: "Client Report - [Insert Project Title]"
+title: "Client Report - Finding Relationships in Baseball"
 subtitle: "Course DS 250"
-author: "[STUDENT NAME]"
+author: "Michael Howes"
 format:
   html:
     self-contained: true
@@ -26,3 +26,162 @@ execute:
 ---
 
 ### Paste in a template
+
+```{python}
+import pandas as pd 
+import numpy as np
+import sqlite3
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+sqlite_file = 'lahmansbaseballdb.sqlite'
+# this file must be in the same location as your .qmd or .py file
+con = sqlite3.connect(sqlite_file)
+```
+
+## QUESTION|TASK 1
+
+__Write an SQL query to create a new dataframe about baseball players who attended BYU-Idaho. The new table should contain five columns: playerID, schoolID, salary, and the yearID/teamID associated with each salary. Order the table by salary (highest to lowest) and print out the table in your report.__  
+
+Originally, the data only showed two players from BYU-Idaho who made it to Major League Baseball — lindsma01 and stephga01 — both of whom had multiple years of recorded salary data. However, after double-checking the source tables, I found there was actually a third player: catetr01. He didn’t show up in the original query because he doesn’t have any salary data listed in the salaries table.
+
+To fix this, I changed the query to use a LEFT JOIN instead of an inner join. This way, it still pulls in all players who attended BYU-Idaho, even if they never received a recorded salary. Including catetr01 gives a more complete view of the school's MLB presence, showing that not all players who make it to the league have documented earnings, especially if they had shorter or less prominent careers.
+
+This change gives a better picture of BYU-Idaho’s impact and also highlights how easy it is to unintentionally exclude valid records depending on the type of join used in a SQL query.
+
+```{python}
+query_q1_fixed = """
+SELECT 
+    cp.playerID,
+    cp.schoolID,
+    s.salary,
+    s.yearID,
+    s.teamID
+FROM collegeplaying cp
+LEFT JOIN salaries s ON cp.playerID = s.playerID
+WHERE cp.schoolID = 'idbyuid'
+ORDER BY s.salary DESC
+"""
+qr = pd.read_sql_query(query_q1_fixed, con)
+qr
+
+
+
+```
+
+
+## QUESTION|TASK 2
+
+__This three-part question requires you to calculate batting average (number of hits divided by the number of at-bats)__  
+    a. Write an SQL query that provides playerID, yearID, and batting average for players with at least 1 at bat that year. Sort the table from highest batting average to lowest, and then by playerid alphabetically. Show the top 5 results in your report.  
+    a. Use the same query as above, but only include players with at least 10 at bats that year. Print the top 5 results.  
+    a. Now calculate the batting average for players over their entire careers (all years combined). Only include players with at least 100 at bats, and print the top 5 results.  
+
+a. This list includes players who had a perfect batting average of 1.000 for the year, but it's clear these were likely just single at-bat appearances. While it's technically impressive to hit in every at-bat, it's not very meaningful when the player only stepped up once. It really highlights the need to set some kind of threshold when evaluating performance — otherwise, we end up with results that don’t tell the full story.
+
+b.With the bar raised to at least 10 at-bats, the averages are still high, but they start to feel a little more credible. The top player hit .643, which is still crazy high, but over a slightly larger sample. These are probably short-term hot streaks rather than season-long performances, but it’s interesting to see who had those explosive stretches.
+
+c. This is where things get serious. These players didn’t just have a good week — they kept it up for years. Ty Cobb stands out with a .366 average over more than 11,000 at-bats, which is just insane. Everyone in the top five has over 1,000 career at-bats, so we’re looking at legit all-time greats. This is the kind of data that really gives insight into long-term performance, not just one-off highlights.
+
+```{python}
+# Part A: Top 5 Yearly Batting Averages
+
+import sqlite3
+import pandas as pd
+
+con = sqlite3.connect("lahmansbaseballdb.sqlite")
+
+query = """
+SELECT 
+    playerID,
+    yearID,
+    ROUND(CAST(H AS FLOAT) / AB, 3) AS batting_avg
+FROM batting
+WHERE AB > 0
+ORDER BY batting_avg DESC, playerID ASC
+LIMIT 5
+"""
+
+batting_avg_top5 = pd.read_sql_query(query, con)
+batting_avg_top5
+
+
+```
+
+```{python}
+# Part B: Top 5 Yearly Batting Averages
+
+query_b = """
+SELECT 
+    playerID,
+    yearID,
+    ROUND(CAST(H AS FLOAT) / AB, 3) AS batting_avg
+FROM batting
+WHERE AB >= 10
+ORDER BY batting_avg DESC, playerID ASC
+LIMIT 5
+"""
+
+batting_avg_top5_b = pd.read_sql_query(query_b, con)
+batting_avg_top5_b
+
+
+```
+
+```{python}
+# Part C: Top 5 Career Batting Averages
+query_c_fix = """
+SELECT 
+    playerID,
+    ROUND(CAST(SUM(H) AS FLOAT) / SUM(AB), 3) AS career_batting_avg,
+    SUM(AB) AS total_AB
+FROM batting
+GROUP BY playerID
+HAVING SUM(AB) >= 100
+ORDER BY career_batting_avg DESC, playerID ASC
+LIMIT 5
+"""
+career_avg_fix = pd.read_sql_query(query_c_fix, con)
+career_avg_fix
+
+
+
+```
+
+
+## QUESTION|TASK 3
+
+__Pick any two baseball teams and compare them using a metric of your choice (average salary, home runs, number of wins, etc). Write an SQL query to get the data you need, then make a graph using Lets-Plot to visualize the comparison. What do you learn?__
+
+The graph shows how the Yankees and Red Sox have spent money over time. Both teams saw sharp increases in average salary starting in the 1990s, but the Yankees consistently paid more on average. That aligns with their reputation as a big-spending team. The gap between the two varies year to year, but the Yankees generally lead. This kind of comparison gives a good look at how different teams invest in talent over time.
+
+```{python}
+query_q3 = """
+SELECT 
+    teamID,
+    yearID,
+    ROUND(AVG(salary), 2) AS avg_salary
+FROM salaries
+WHERE teamID IN ('NYA', 'BOS')
+GROUP BY teamID, yearID
+ORDER BY yearID, teamID
+"""
+team_salaries = pd.read_sql_query(query_q3, con)
+team_salaries
+
+
+from lets_plot import *
+LetsPlot.setup_html()
+
+ggplot(team_salaries, aes(x='yearID', y='avg_salary', color='teamID')) + \
+    geom_line() + \
+    ggtitle("Average Salary by Year: NY Yankees vs Boston Red Sox") + \
+    ylab("Average Salary (USD)") + \
+    xlab("Year")

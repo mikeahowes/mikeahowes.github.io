@@ -1,7 +1,7 @@
 ---
-title: "Client Report - [Insert Project Title]"
+title: "Client Report - What's in a Name?"
 subtitle: "Course DS 250"
-author: "[STUDENT NAME]"
+author: "Michael Howes"
 format:
   html:
     self-contained: true
@@ -26,3 +26,181 @@ execute:
 ---
 
 ### Paste in a template
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+## Project Notes
+
+__For Project 1 the answer to each question should include a chart **and** a written response. The years labels on your charts should not include a comma. At least **two** of your charts must include reference marks.__  
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+df = pd.read_csv("https://github.com/byuidatascience/data4names/raw/master/data-raw/names_year/names_year.csv")
+```
+
+## QUESTION|TASK 1
+
+__How does your name at your birth year compare to its use historically?__
+
+The name Michael has had a long-standing presence in the United States, maintaining exceptional popularity through much of the past century. As the chart illustrates, its usage surged starting around the 1940s and reached a peak between the 1950s and 1990s, consistently ranking among the top boy names. In 1998, the year I was born, Michael was the most popular boy name, although the trend had begun to decline slightly from its peak in previous decades. Since then, its usage has gradually decreased. This suggests that while Michael was a very popular name during my birth year, it has become less frequently used among newer generations, reflecting evolving naming trends.
+
+```{python}
+import pandas as pd
+from lets_plot import *
+
+LetsPlot.setup_html()
+
+df = pd.read_csv("names_year copy.txt")
+#look me up
+michael_df = df[df['name'] == 'Michael'].groupby('year')['Total'].sum().reset_index()
+
+(
+    ggplot(michael_df, aes(x='year', y='Total')) +
+    geom_line(color='blue', size=1.2) +
+    geom_vline(xintercept=1998, color='red', linetype='dashed') +
+    ggtitle('Popularity of the Name "Michael" Over Time') +
+    xlab('Year') + ylab('Number of Babies Named Michael') +
+    scale_x_continuous() +
+    theme(axis_text_x=element_text(angle=45, hjust=1))
+)
+
+```
+
+
+## QUESTION|TASK 2
+
+__If you talked to someone named Brittany on the phone, what is your guess of his or her age? What ages would you not guess?__
+
+The name Brittany saw a rapid rise in popularity during the 1980s and peaked in the early 1990s, as shown in the chart. Based on this pattern, if I were speaking with someone named Brittany on the phone, I would reasonably guess they were born between 1985 and 1995, placing them in their late 20s to early 40s today. I would be less likely to guess that they were younger than 20 or older than 45, since the name sharply declined after the mid-1990s and was rarely used before the 1980s. This reflects how cultural trends can heavily influence baby name choices during specific decades.
+
+```{python}
+# Include and execute your code here
+import pandas as pd
+from lets_plot import *
+
+LetsPlot.setup_html()
+
+df = pd.read_csv ("names_year copy.txt")
+#look for brittany
+brittany_df = df[df['name'] == 'Brittany'].groupby('year')['Total'].sum().reset_index()
+
+(
+    ggplot(brittany_df, aes(x='year', y='Total')) +
+    geom_line(color='blue', size=1.2) +
+    geom_vline(xintercept=1990, color='red', linetype='dashed') +
+    ggtitle('Popularity of the Name "Brittany" Over Time') +
+    xlab('Year') + ylab('Number of Babies Named Brittany') +
+    scale_x_continuous() +
+    theme(axis_text_x=element_text(angle=45, hjust=1))
+)
+
+```
+
+
+## QUESTION|TASK 3
+
+__Mary, Martha, Peter, and Paul are all Christian names. From 1920 - 2000, compare the name usage of each of the four names in a single chart. What trends do you notice?__
+
+The chart shows that Mary was by far the most popular of the four names throughout the 20th century, especially from 1920 to the mid-1960s. After that, its usage declined steadily. Martha followed a similar trend but at much lower numbers, peaking in the 1940s. Peter and Paul had relatively steady popularity, with Paul experiencing a spike around the 1950s and 60s. Overall, these trends reflect broader cultural and religious naming patterns that gradually shifted over time.
+
+```{python}
+# Include and execute your code here
+import pandas as pd
+from lets_plot import *
+
+LetsPlot.setup_html()
+
+df = pd.read_csv("names_year copy.txt")
+
+names_to_compare = ['Mary', 'Martha', 'Peter', 'Paul']
+df_filtered = df[(df['name'].isin(names_to_compare)) & 
+                 (df['year'] >= 1920) & (df['year'] <= 2000)]
+
+grouped = df_filtered.groupby(['name', 'year'])['Total'].sum().reset_index()
+
+grouped['year'] = grouped['year'].astype(str)
+
+(
+    ggplot(grouped, aes(x='year', y='Total', color='name')) +
+    geom_line(size=1.2) +
+    ggtitle('Name Usage: Mary, Martha, Peter, and Paul (1920–2000)') +
+    xlab('Year') + ylab('Number of Babies') +
+    theme(axis_text_x=element_text(angle=45, hjust=1))
+)
+
+```
+
+
+
+## QUESTION|TASK 4
+
+__Think of a unique name from a famous movie. Plot the usage of that name and see how changes line up with the movie release. Does it look like the movie had an effect on usage?__  
+
+The name Elsa was modestly popular throughout the early and mid-20th century. It made a sharp increase starting in 2013, the year Frozen was released. The spike in name usage following the movie's success suggests a strong cultural influence, as parents were likely inspired by the beloved main character. This trend is a clear example of how popular media can significantly affect naming choices in modern times.
+```{python}
+# Include and execute your code here
+import pandas as pd
+from lets_plot import *
+
+LetsPlot.setup_html()
+
+df = pd.read_csv("names_year copy.txt")
+
+# look up Elsa
+elsa_df = df[df['name'] == 'Elsa'].groupby('year')['Total'].sum().reset_index()
+
+(
+    ggplot(elsa_df, aes(x='year', y='Total')) +
+    geom_line(color='darkgreen', size=1.2) +
+    geom_vline(xintercept=2013, color='red', linetype='dashed') +
+    ggtitle('Popularity of the Name "Elsa" and the Impact of Frozen (2013)') +
+    xlab('Year') + ylab('Number of Babies Named Elsa') +
+    scale_x_continuous() +
+    theme(axis_text_x=element_text(angle=45, hjust=1))
+)
+
+```
+
+---
+
+## STRETCH QUESTION|TASK 1
+
+__Reproduce the chart Elliot using the data from the `names_year.csv` file.__ 
+
+The name Elliot has seen a steady rise in popularity over the decades, particularly from the 1980s onward. This upward trend may be partially linked to cultural influences such as the 1982 film E.T. the Extra-Terrestrial, where the main character is a young boy named Elliot. While the increase is gradual rather than a sharp spike, the movie likely contributed to broader awareness and appeal of the name. In recent years, Elliot has become increasingly common, perhaps due to its modern, gentle sound and gender-neutral appeal.
+```{python}
+# Include and execute your code here
+import pandas as pd
+from lets_plot import *
+
+LetsPlot.setup_html()
+
+df = pd.read_csv("names_year copy.txt")
+
+elliot_df = df[df['name'] == 'Elliot'].groupby('year')['Total'].sum().reset_index()
+
+elliot_df['year'] = elliot_df['year'].astype(str)
+
+(
+    ggplot(elliot_df, aes(x='year', y='Total')) +
+    geom_line(color='orange', size=1.2) +
+    ggtitle('Popularity of the Name "Elliot" Over Time') +
+    xlab('Year') + ylab('Number of Babies Named Elliot') +
+    theme(axis_text_x=element_text(angle=45, hjust=1))
+)
+
+
+```
+
+
+---

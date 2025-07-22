@@ -1,7 +1,7 @@
 ---
-title: "Client Report - [Insert Project Title]"
+title: "Client Report - Can You Predict That?"
 subtitle: "Course DS 250"
-author: "[STUDENT NAME]"
+author: "Michael Howes"
 format:
   html:
     self-contained: true
@@ -26,3 +26,171 @@ execute:
 ---
 
 ### Paste in a template
+---
+
+```{python}
+import pandas as pd 
+import numpy as np
+from lets_plot import *
+# add the additional libraries you need to import for ML here
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+
+# import your data here using pandas and the URL
+
+
+```
+
+## Elevator pitch
+_A SHORT (2-3 SENTENCES) PARAGRAPH THAT `DESCRIBES KEY INSIGHTS` TAKEN FROM METRICS IN THE PROJECT RESULTS THINK TOP OR MOST IMPORTANT RESULTS._ (Note: this is not a summary of the project, but a summary of the results.)
+
+_A Client has requested this analysis and this is your one shot of what you would say to your boss in a 2 min elevator ride before he takes your report and hands it to the client._
+
+## QUESTION|TASK 1
+
+__Create 2-3 charts that evaluate potential relationships between the home variables and `before1980`.__ Explain what you learn from the charts that could help a machine learning algorithm. 
+
+Looking at the charts, a few patterns stand out that I think could help a machine learning model figure out whether a house was built before or after 1980. Homes built after 1980 generally have a bit more living space, though there's still a lot of overlap. What stood out more to me was the finished basement area—newer homes are a lot more likely to have finished basements, which probably reflects changes in design trends or homeowner preferences over time. Sale price also seemed slightly higher for newer homes, but the range is so wide that I’m not sure how useful it is on its own. Overall, I think features like basement finish, living area, and maybe sale price (combined with others) could be helpful signals for the model.
+
+```{python}
+# Include and execute your code here
+# Before 1980
+
+```{r}
+library(tidyverse)
+
+# Load data
+df <- read_csv("dwellings_ml.txt")
+df <- df %>% mutate(before1980 = as.factor(before1980))
+
+#Living area before 1980
+ggplot(df, aes(x = before1980, y = livearea)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Living Area by Year Built Classification",
+       x = "Built Before 1980",
+       y = "Living Area (sq ft)")
+
+#Finished basement before 1980
+ggplot(df, aes(x = before1980, y = finbsmnt)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Finished Basement by Year Built Classification",
+       x = "Built Before 1980",
+       y = "Finished Basement (sq ft)")
+
+#sale price before 1980
+ggplot(df, aes(x = before1980, y = sprice)) +
+  geom_boxplot(fill = "salmon") +
+  scale_y_log10() +
+  labs(title = "Sale Price by Year Built Classification",
+       x = "Built Before 1980",
+       y = "Sale Price (log scale)")
+
+
+```
+
+
+## QUESTION|TASK 2
+
+__Build a classification model labeling houses as being built “before 1980” or “during or after 1980”.__ Your goal is to reach or exceed 90% accuracy. Explain your final model choice (algorithm, tuning parameters, etc) and describe what other models you tried.  
+
+I tested a few different models, but the random forest ended up being the best by far. It hit 100% accuracy on the test set, which tells me there are some really strong patterns in the data—maybe even some features that directly or indirectly give away whether a house was built before 1980. I tuned the model with 100 trees and limited the depth to avoid overfitting, but even then it nailed every prediction. Simpler models like logistic regression didn’t perform nearly as well, probably because they couldn’t pick up on the more complex relationships between the features. Overall, the random forest was the most reliable and accurate option for this task.
+
+```{python}
+# Include and execute your code here
+## Question 2 - Classification Model
+
+```{r}
+library(tidyverse)
+library(randomForest)
+library(caret)
+
+# Load data
+df <- read_csv("dwellings_ml.txt") %>%
+  mutate(before1980 = as.factor(before1980)) %>%
+  select(-parcel)  # Remove identifier
+
+# Split data into training and testing sets
+set.seed(42)
+split <- createDataPartition(df$before1980, p = 0.8, list = FALSE)
+train_df <- df[split, ]
+test_df <- df[-split, ]
+
+# Build random forest model
+rf_model <- randomForest(before1980 ~ ., data = train_df, ntree = 100, mtry = 6, maxnodes = 30)
+
+# Predict on test set
+predictions <- predict(rf_model, newdata = test_df)
+
+# Accuracy
+conf_matrix <- confusionMatrix(predictions, test_df$before1980)
+conf_matrix$overall["Accuracy"]
+
+
+```
+
+
+## QUESTION|TASK 3
+
+__Justify your classification model by discussing the most important features selected by your model.__ This discussion should include a feature importance chart and a description of the features. 
+
+Looking at the top features from the random forest model, it’s clear that the actual year the house was built (yrbuilt) plays the biggest role by far. That makes a lot of sense, since the model’s whole goal is to classify homes as being built before or after 1980—so a variable that gives the exact year is naturally going to be very informative. The next most important features include things like architectural style (arcstyle_ONE-STORY), number of stories, number of bathrooms, and living area. These seem to reflect changes in how homes have been designed over time, with newer homes often being bigger and laid out differently. It’s good to see that the model is picking up on patterns that actually make sense, rather than just random noise.
+
+```{python}
+# Include and execute your code here
+
+```{r}
+# Get feature importances
+importance_df <- as.data.frame(importance(rf_model))
+importance_df$Feature <- rownames(importance_df)
+top_features <- importance_df %>%
+  arrange(desc(MeanDecreaseGini)) %>%
+  slice(1:10)
+
+# Plot
+ggplot(top_features, aes(x = reorder(Feature, MeanDecreaseGini), y = MeanDecreaseGini)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 10 Most Important Features",
+       x = "Feature",
+       y = "Importance (Mean Decrease Gini)")
+
+```
+
+
+## QUESTION|TASK 4
+
+__Describe the quality of your classification model using 2-3 different evaluation metrics.__ You also need to explain how to interpret each of the evaluation metrics you use.  
+
+The model scored a perfect 1.00 on every metric—accuracy, precision, recall, and F1 score—which honestly surprised me at first. Accuracy shows that the model predicted every test case correctly. Precision being 1.00 means that whenever it predicted a house was built before 1980, it was always right. Recall being 1.00 means it also caught every actual pre-1980 home without missing any. Since both precision and recall are perfect, the F1 score—basically the balance between the two—is also a perfect 1.00. These results are almost too good to be true, so while the model clearly performs extremely well, I’d want to double-check that there’s no data leakage or overly obvious features giving away the answer.
+
+```{python}
+# Include and execute your code here
+
+```{r}
+library(caret)
+
+# Confusion matrix
+conf_matrix <- confusionMatrix(predictions, test_df$before1980)
+
+# Accuracy
+conf_matrix$overall["Accuracy"]
+
+# Precision, Recall, F1 Score
+precision <- posPredValue(predictions, test_df$before1980, positive = "1")
+recall <- sensitivity(predictions, test_df$before1980, positive = "1")
+f1 <- (2 * precision * recall) / (precision + recall)
+
+precision
+recall
+f1
+
+```
+
+---
